@@ -1,0 +1,22 @@
+{
+  "name": "flot-legend",
+  "version": "1.0.0-SNAPSHOT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/j-white/flot-legend.git"
+  },
+  "homepage": "https://github.com/j-white/flot-legend",
+  "devDependencies": {
+    "karma": "~0.13.11",
+    "karma-jasmine": "~0.3.6",
+    "karma-phantomjs-launcher": "~0.2.1",
+    "bower": "~1.6.3"
+  },
+  "scripts": {
+    "postinstall": "bower install",
+    "prestart": "npm install",
+    "start": "http-server -a localhost -p 8000 -c-1",
+    "test": "./node_modules/karma/bin/karma start --single-run --browsers PhantomJS"
+  }
+}
+
