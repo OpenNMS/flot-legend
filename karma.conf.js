@@ -16,7 +16,7 @@ module.exports = function(config) {
         files: [
             'bower_components/jquery/dist/jquery.min.js',
             'bower_components/flot/jquery.flot.js',
-            'jquery.flot.legend.js',
+            'src/main.js',
             'test/*.test.js'
         ],
 
