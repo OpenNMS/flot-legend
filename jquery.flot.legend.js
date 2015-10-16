@@ -2,7 +2,12 @@
     var options = {
         legend: {
             statements: [],
-            margin: { left: 5, right: 0, top: 0, bottom: 0 },
+            margin: {
+                left: 5,
+                right: 0,
+                top: 0,
+                bottom: 0
+            },
             style: {
                 fontSize: 10,
                 spaceWidth: 5,
@@ -12,24 +17,28 @@
         }
     };
 
+    function getLineWidth(options) {
+        return options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
+    }
+
     function calculateLegendHeight(options) {
-        var lineWidth = options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
+        var lineWidth = getLineWidth(options);
 
         // Count the number of lines
         var numberOfLines = 0;
-        var numberOfEntriesOnNewline = 0;
+        var numberOfStatementsOnNewline = 0;
 
         $.each(options.legend.statements, function(idx) {
             var statement = options.legend.statements[idx];
             if (statement.value.indexOf("\\n") > -1) {
                 numberOfLines++;
-                numberOfEntriesOnNewline = 0;
+                numberOfStatementsOnNewline = 0;
             } else {
-                numberOfEntriesOnNewline++;
+                numberOfStatementsOnNewline++;
             }
         });
 
-        if (numberOfEntriesOnNewline > 0) {
+        if (numberOfStatementsOnNewline > 0) {
             numberOfLines++;
         }
 
@@ -240,7 +249,7 @@
         }
     }
 
-    function drawStatement(legendCtx, statement, options, allSeries) {
+    function drawStatement(statement, legendCtx, options, allSeries) {
 
         var canvasCtx = legendCtx.canvasCtx;
         var spaceWidth = options.legend.style.spaceWidth;
@@ -290,7 +299,7 @@
 
             } else if (token.type === 'newline') {
 
-                legendCtx.y += options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
+                legendCtx.y += getLineWidth(options);
                 legendCtx.x = legendCtx.xMin;
 
             } else if (token.type === 'unit') {
@@ -345,23 +354,29 @@
             var legendHeight = calculateLegendHeight(options);
             options.grid.margin.bottom += legendHeight;
 
-            plot.hooks.draw.push(function (plot, ctx) {
-                var ctx = plot.getCanvas().getContext('2d');
+            plot.hooks.draw.push(function (plot) {
+                // Build a context that contains everything we need to draw the statements
+                var ctx = {};
+                ctx.canvasCtx = plot.getCanvas().getContext('2d');
 
-                var legendCtx = {};
-                legendCtx.canvasCtx = ctx;
-                legendCtx.xMin = options.legend.margin.left;
-                legendCtx.yMin = ctx.canvas.clientHeight - legendHeight + options.legend.margin.top;
-                legendCtx.xMax = ctx.canvas.clientWidth - options.legend.margin.right;
-                legendCtx.yMax = ctx.canvas.clientHeight - options.legend.margin.bottom;
-                legendCtx.x = legendCtx.xMin;
-                legendCtx.y = legendCtx.yMin;
+                // Outer bounds
+                ctx.xMin = options.legend.margin.left;
+                ctx.yMin = ctx.canvasCtx.canvas.clientHeight - legendHeight + options.legend.margin.top;
+                ctx.xMax = ctx.canvasCtx.canvas.clientWidth - options.legend.margin.right;
+                ctx.yMax = ctx.canvasCtx.canvas.clientHeight - options.legend.margin.bottom;
 
+                // Initial coordinates
+                ctx.x = ctx.xMin;
+                ctx.y = ctx.yMin;
+
+                // Draw!
+                var allSeries = plot.getData();
                 $.each(options.legend.statements, function(idx) {
-                    drawStatement(legendCtx, options.legend.statements[idx], options, plot.getData());
+                    var statement = options.legend.statements[idx];
+                    drawStatement(statement, ctx, options, allSeries);
                 });
 
-                ctx.save();
+                ctx.canvasCtx.save();
             });
         });
     }
