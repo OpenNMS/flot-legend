@@ -339,6 +339,9 @@
                 return;
             }
 
+            // Hide the existing legend
+            options.legend.show = false;
+
             var legendHeight = calculateLegendHeight(options);
             options.grid.margin.bottom += legendHeight;
 
