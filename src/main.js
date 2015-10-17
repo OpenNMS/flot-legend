@@ -16,6 +16,13 @@ var options = {
     }
 };
 
+var TOKENS = Object.freeze({
+    "Badge":1,
+    "Text": 2,
+    "Unit": 3,
+    "Lf": 4
+});
+
 function getLineWidth(options) {
     return options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
 }
@@ -64,13 +71,13 @@ function tokenizeStatement(statement) {
 
             if (stack.length > 0) {
                 tokens.push({
-                    type: 'text',
+                    type: TOKENS.Text,
                     value: stack.join('')
                 });
                 stack = [];
             }
             tokens.push({
-                type: 'badge'
+                type: TOKENS.Badge
             });
 
             hasBadgeToken = true;
@@ -80,13 +87,13 @@ function tokenizeStatement(statement) {
 
             if (stack.length > 0) {
                 tokens.push({
-                    type: 'text',
+                    type: TOKENS.Text,
                     value: stack.join('')
                 });
                 stack = [];
             }
             tokens.push({
-                type: 'unit'
+                type: TOKENS.Unit
             });
 
             hasUnitToken = true;
@@ -100,7 +107,7 @@ function tokenizeStatement(statement) {
         } else if (c == '\\' && nextc == 'n') {
             if (stack.length > 0) {
                 tokens.push({
-                    type: 'text',
+                    type: TOKENS.Text,
                     value: stack.join('')
                 });
                 stack = [];
@@ -122,14 +129,14 @@ function tokenizeStatement(statement) {
 
             if (stack.length > 0) {
                 tokens.push({
-                    type: 'text',
+                    type: Tokens.Text,
                     value: stack.join('')
                 });
                 stack = [];
             }
 
             tokens.push({
-                type: 'lf',
+                type: TOKENS.Lf,
                 length: length !== null ? parseInt(length) : -1,
                 precision: parseInt(precision)
             });
@@ -154,7 +161,7 @@ function tokenizeStatement(statement) {
 
     if (stack.length > 0) {
         tokens.push({
-            type: 'text',
+            type: TOKENS.Text,
             value: stack.join('')
         });
     }
@@ -279,11 +286,11 @@ function drawStatement(statement, legendCtx, options, allSeries) {
     $.each(tokens, function(idx) {
         var token = tokens[idx];
 
-        if (token.type === 'text') {
+        if (token.type === TOKENS.Text) {
 
             drawText(legendCtx, fontSize, token.value);
 
-        } else if (token.type === 'badge') {
+        } else if (token.type === TOKENS.Badge) {
 
             canvasCtx.fillStyle=series.color;
             canvasCtx.fillRect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
@@ -301,7 +308,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
             legendCtx.y += getLineWidth(options);
             legendCtx.x = legendCtx.xMin;
 
-        } else if (token.type === 'unit') {
+        } else if (token.type === TOKENS.Unit) {
 
             if (lastSymbol === "") {
                 lastSymbol = " ";
@@ -309,7 +316,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             drawText(legendCtx, fontSize, lastSymbol + " ");
 
-        } else if (token.type === 'lf') {
+        } else if (token.type === TOKENS.Lf) {
 
             var value = reduceWithAggregate(statement.aggregation, series);
             var scaledValue = value;
