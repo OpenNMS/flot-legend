@@ -1,3 +1,5 @@
+"use strict";
+
 var options = {
     legend: {
         statements: [],
@@ -17,10 +19,11 @@ var options = {
 };
 
 var TOKENS = Object.freeze({
-    "Badge":1,
-    "Text": 2,
-    "Unit": 3,
-    "Lf": 4
+    'Badge': 'badge',
+    'Text': 'text',
+    'Unit': 'unit',
+    'Lf': 'lf',
+    'Newline': 'newline'
 });
 
 function getLineWidth(options) {
@@ -51,52 +54,57 @@ function calculateLegendHeight(options) {
     return numberOfLines * lineWidth + options.legend.margin.top + options.legend.margin.bottom;
 }
 
-function tokenizeStatement(statement) {
+function tokenizeStatement(value) {
 
-    var hasBadgeToken = false;
-    var hasLfToken = false;
-    var hasUnitToken = false;
+    var stack = [], tokens = [], types = {}, lfRegex = /^%(\d*)(\.(\d+))?lf/;
 
-    var state = 0, stack = [], tokens = [];
+    var accountForTokenType = function(type) {
+        if (types.hasOwnProperty(type)) {
+            types[type] += 1;
+        } else {
+            types[type] = 1;
+        }
+    };
 
-    for (var i = 0, len = statement.value.length; i < len; i++) {
+    var numTokensWithType = function(type) {
+        return types.hasOwnProperty(type) ? types[type] : 0;
+    };
 
-        // The next index, bounded by the size of the string
-        var nexti = Math.min(i+1, len - 1);
+    var pushToken = function(token) {
+        if (stack.length > 0) {
+            tokens.push({
+                type: TOKENS.Text,
+                value: stack.join('')
+            });
+            stack = [];
+            accountForTokenType(TOKENS.Text);
+        }
 
-        var c = statement.value[i];
-        var nextc = statement.value[nexti];
+        if (token !== undefined) {
+            tokens.push(token);
+            accountForTokenType(token.type);
+        }
+    };
+
+    for (var i = 0, len = value.length; i < len; i++) {
+
+        var c = value[i];
+        // Grab the next character, bounded by the size of the string
+        var nextc = value[Math.min(i+1, len - 1)];
+        var match;
 
         if (c === '%' && nextc === 'g') {
 
-            if (stack.length > 0) {
-                tokens.push({
-                    type: TOKENS.Text,
-                    value: stack.join('')
-                });
-                stack = [];
-            }
-            tokens.push({
+            pushToken({
                 type: TOKENS.Badge
             });
-
-            hasBadgeToken = true;
 
             i++;
         } else if (c === '%' && nextc === 's') {
 
-            if (stack.length > 0) {
-                tokens.push({
-                    type: TOKENS.Text,
-                    value: stack.join('')
-                });
-                stack = [];
-            }
-            tokens.push({
+            pushToken({
                 type: TOKENS.Unit
             });
-
-            hasUnitToken = true;
 
             i++;
         } else if (c === '%' && nextc === '%') {
@@ -105,43 +113,31 @@ function tokenizeStatement(statement) {
 
             i++;
         } else if (c == '\\' && nextc == 'n') {
-            if (stack.length > 0) {
-                tokens.push({
-                    type: TOKENS.Text,
-                    value: stack.join('')
-                });
-                stack = [];
-            }
-            tokens.push({
-                type: 'newline'
+
+            pushToken({
+                type: TOKENS.Newline
             });
 
             i++;
-        } else if (statement.value.slice(i).match(/^%(\d*)\.\d+lf/) !== null) {
-            var slice = statement.value.slice(i);
-
-            var regex = /^%(\d*)\.(\d+)lf/;
-
-            var match = regex.exec(slice);
-
-            var length = match[1];
-            var precision = match[2];
-
-            if (stack.length > 0) {
-                tokens.push({
-                    type: Tokens.Text,
-                    value: stack.join('')
-                });
-                stack = [];
+        } else if ( (match = lfRegex.exec(value.slice(i))) !== null) {
+            var length = NaN;
+            try {
+                length = parseInt(match[1]);
+            } catch(err) {
+                // pass
+            }
+            var precision = NaN;
+            try {
+                precision = parseInt(match[3]);
+            } catch(err) {
+                // pass
             }
 
-            tokens.push({
+            pushToken({
                 type: TOKENS.Lf,
-                length: length !== null ? parseInt(length) : -1,
-                precision: parseInt(precision)
+                length: isNaN(length) ? null : length,
+                precision: isNaN(precision) ? null : precision
             });
-
-            hasLfToken = true;
 
             i += match[0].length - 1;
         } else {
@@ -150,24 +146,17 @@ function tokenizeStatement(statement) {
     }
 
     // Always add a space to the end of the statement if there was a badge printed
-    if (hasBadgeToken) {
+    if (numTokensWithType(TOKENS.Badge) > 0) {
         stack.push(" ");
     }
 
     // Add a space after the %lf statement if there is no unit
-    if (hasLfToken && !hasUnitToken && tokens[tokens.length - 1].type === "lf") {
+    if (numTokensWithType(TOKENS.Lf) > 0 && numTokensWithType(TOKENS.Unit) === 0 && tokens[tokens.length - 1].type === TOKENS.Lf) {
         stack.push(" ");
     }
 
-    if (stack.length > 0) {
-        tokens.push({
-            type: TOKENS.Text,
-            value: stack.join('')
-        });
-    }
-
-    // console.log("'" + statement.value + "'");
-    // console.log(JSON.stringify(tokens));
+    // Convert any remaining characters on the stack to a text token
+    pushToken();
 
     return tokens;
 }
@@ -282,7 +271,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
     }
 
     var lastSymbol = "";
-    var tokens = tokenizeStatement(statement);
+    var tokens = tokenizeStatement(statement.value);
     $.each(tokens, function(idx) {
         var token = tokens[idx];
 
@@ -303,7 +292,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             legendCtx.x += badgeSize;
 
-        } else if (token.type === 'newline') {
+        } else if (token.type === TOKENS.Newline) {
 
             legendCtx.y += getLineWidth(options);
             legendCtx.x = legendCtx.xMin;
