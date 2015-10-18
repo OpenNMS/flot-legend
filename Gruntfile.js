@@ -2,6 +2,8 @@ module.exports = function (grunt) {
 
   var srcFiles = [
     'src/header.js',
+    'src/constants.js',
+    'src/renderers.js',
     'src/main.js',
     'src/footer.js'
   ];

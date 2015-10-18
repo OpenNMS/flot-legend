@@ -1,58 +1,3 @@
-"use strict";
-
-var options = {
-    legend: {
-        statements: [],
-        margin: {
-            left: 5,
-            right: 0,
-            top: 0,
-            bottom: 0
-        },
-        style: {
-            fontSize: 10,
-            badgeSize: 10,
-            lineSpacing: 5
-        }
-    }
-};
-
-var TOKENS = Object.freeze({
-    'Badge': 'badge',
-    'Text': 'text',
-    'Unit': 'unit',
-    'Lf': 'lf',
-    'Newline': 'newline'
-});
-
-function getLineWidth(options) {
-    return options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
-}
-
-function calculateLegendHeight(options) {
-    var lineWidth = getLineWidth(options);
-
-    // Count the number of lines
-    var numberOfLines = 0;
-    var numberOfStatementsOnNewline = 0;
-
-    $.each(options.legend.statements, function(idx) {
-        var statement = options.legend.statements[idx];
-        if (statement.value.indexOf("\\n") > -1) {
-            numberOfLines++;
-            numberOfStatementsOnNewline = 0;
-        } else {
-            numberOfStatementsOnNewline++;
-        }
-    });
-
-    if (numberOfStatementsOnNewline > 0) {
-        numberOfLines++;
-    }
-
-    return numberOfLines * lineWidth + options.legend.margin.top + options.legend.margin.bottom;
-}
-
 function tokenizeStatement(value) {
 
     var stack = [], tokens = [], types = {}, lfRegex = /^%(\d*)(\.(\d+))?lf/;
@@ -258,17 +203,7 @@ function getSeriesWithMetricName(metric, allSeries, options) {
     }
 }
 
-function drawStatement(statement, legendCtx, options, allSeries) {
-
-    var canvasCtx = legendCtx.canvasCtx;
-    var badgeSize = options.legend.style.badgeSize;
-    var fontSize = options.legend.style.fontSize;
-
-    // Find the series with the metric name if it's defined, not all statements need an associated metric
-    var series = undefined;
-    if (statement.metric !== undefined) {
-        series = getSeriesWithMetricName(statement.metric, allSeries, options);
-    }
+function renderStatement(statement, series, renderer) {
 
     // Parse the statement into a series of tokens
     var tokens = tokenizeStatement(statement.value);
@@ -279,25 +214,15 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
         if (token.type === TOKENS.Text) {
 
-            drawText(legendCtx, fontSize, token.value);
+            renderer.drawText(token.value);
 
         } else if (token.type === TOKENS.Badge) {
 
-            canvasCtx.fillStyle = series.color;
-            canvasCtx.fillRect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
-
-            canvasCtx.beginPath();
-            canvasCtx.lineWidth = "0.5";
-            canvasCtx.strokeStyle = "black";
-            canvasCtx.rect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
-            canvasCtx.stroke();
-
-            legendCtx.x += badgeSize;
+            renderer.drawBadge(series.color);
 
         } else if (token.type === TOKENS.Newline) {
 
-            legendCtx.y += getLineWidth(options);
-            legendCtx.x = legendCtx.xMin;
+            renderer.drawNewline();
 
         } else if (token.type === TOKENS.Unit) {
 
@@ -305,7 +230,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
                 lastSymbol = " ";
             }
 
-            drawText(legendCtx, fontSize, lastSymbol + " ");
+            renderer.drawText( lastSymbol + " ");
 
         } else if (token.type === TOKENS.Lf) {
 
@@ -330,24 +255,12 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             format = d3.format(format);
 
-            drawText(legendCtx, fontSize, format(scaledValue));
+            renderer.drawText(format(scaledValue));
 
         } else {
             throw "Unsupported token: " + JSON.stringify(token);
         }
     });
-}
-
-function drawText(legendCtx, fontSize, text) {
-    var canvasCtx = legendCtx.canvasCtx;
-
-    canvasCtx.fillStyle = "black";
-    canvasCtx.font = fontSize + "px Monospace";
-    canvasCtx.textAlign = "left";
-    canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
-
-    var textSize = canvasCtx.measureText(text);
-    legendCtx.x += textSize.width;
 }
 
 function init(plot) {
@@ -360,32 +273,28 @@ function init(plot) {
         // Hide the existing legend
         options.legend.show = false;
 
-        var legendHeight = calculateLegendHeight(options);
-        options.grid.margin.bottom += legendHeight;
+        var rendererType = CanvasLegend;
+        var renderer = new rendererType(plot, options);
+
+        // Shift the graph up by the legend height
+        options.grid.margin.bottom = renderer.getLegendHeight();
 
         plot.hooks.draw.push(function (plot) {
-            // Build a context that contains everything we need to draw the statements
-            var ctx = {};
-            ctx.canvasCtx = plot.getCanvas().getContext('2d');
-
-            // Outer bounds
-            ctx.xMin = options.legend.margin.left;
-            ctx.yMin = ctx.canvasCtx.canvas.clientHeight - legendHeight + options.legend.margin.top;
-            ctx.xMax = ctx.canvasCtx.canvas.clientWidth - options.legend.margin.right;
-            ctx.yMax = ctx.canvasCtx.canvas.clientHeight - options.legend.margin.bottom;
-
-            // Initial coordinates
-            ctx.x = ctx.xMin;
-            ctx.y = ctx.yMin;
-
-            // Draw!
+            // Render!
+            renderer.beforeDraw();
             var allSeries = plot.getData();
             $.each(options.legend.statements, function(idx) {
                 var statement = options.legend.statements[idx];
-                drawStatement(statement, ctx, options, allSeries);
-            });
 
-            ctx.canvasCtx.save();
+                // Find the series with the metric name if it's defined, not all statements need an associated metric
+                var series = undefined;
+                if (statement.metric !== undefined) {
+                    series = getSeriesWithMetricName(statement.metric, allSeries, options);
+                }
+
+                renderStatement(statement, series, renderer);
+            });
+            renderer.afterDraw();
         });
     });
 }

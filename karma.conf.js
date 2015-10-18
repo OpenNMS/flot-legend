@@ -18,6 +18,8 @@ module.exports = function(config) {
             'bower_components/jquery/dist/jquery.min.js',
             'bower_components/flot/jquery.flot.js',
             'jquery.flot.legend.js',
+            'src/constants.js',
+            'src/renderers.js',
             'src/main.js',
             'test/*.test.js'
         ],

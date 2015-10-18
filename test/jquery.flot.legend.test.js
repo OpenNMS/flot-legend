@@ -1,11 +1,5 @@
 describe('jquery.flot.legend', function () {
 
-    describe('.getLineWidth', function() {
-        it('should return a sensible default value', function() {
-            expect(getLineWidth(options)).toBe(15);
-        });
-    });
-
     describe('.tokenizeStatement', function() {
         it('should be able to convert statements to tokens', function() {
             var tokens = tokenizeStatement('Max  : %8.2lf %s\\n');
