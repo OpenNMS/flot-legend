@@ -165,7 +165,9 @@ function reduceWithAggregate(data, aggregation) {
     var i, N = data.length, total = 0, y, yMin = NaN, yMax = NaN;
 
     var getYFromPoint = function(point) {
-        if (point.length === 2) {
+        if (point === null) {
+            return NaN;
+        } else if (point.length === 2) {
             return point[1];
         } else if (point.length === 3) {
             return point[1] - point[2];
@@ -217,7 +219,7 @@ function reduceWithAggregate(data, aggregation) {
 
     } else if (aggregation === 'LAST') {
 
-        for(i = N-1; i >= 0; i++) {
+        for(i = N-1; i >= 0; i--) {
             y = getYFromPoint(data[i]);
             if (!isNaN(y)) {
                 return y;
@@ -245,11 +247,13 @@ function drawStatement(statement, legendCtx, options, allSeries) {
             }
         });
 
-        $.each(options.hiddenSeries, function(idx) {
-            if (options.hiddenSeries[idx].metric === statement.metric) {
-                series = options.hiddenSeries[idx];
-            }
-        });
+        if (options.hiddenSeries !== undefined) {
+            $.each(options.hiddenSeries, function(idx) {
+                if (options.hiddenSeries[idx].metric === statement.metric) {
+                    series = options.hiddenSeries[idx];
+                }
+            });
+        }
 
         if (series === undefined) {
             throw "No series with metric '" + statement.metric + "' was found.";

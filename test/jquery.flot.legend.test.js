@@ -62,14 +62,16 @@ describe('jquery.flot.legend', function () {
             [0,0],
             [1,1],
             [2,NaN],
-            [3,3]
+            [3,3],
+            null
         ];
 
         var stackedDataWithNaNs = [
             [0,1,1],
             [1,3,2],
             [2,NaN,NaN],
-            [3,6,3]
+            [3,6,3],
+            null
         ];
 
         it('should support MIN, MAX, AVERAGE and LAST aggregation functions', function () {
@@ -87,4 +89,74 @@ describe('jquery.flot.legend', function () {
         });
     });
 
+    describe('rendering', function() {
+        var div;
+
+        var series = [
+            {
+                metric: 'main',
+                color: '#feeded',
+                data: [[0, 12], [7, 12], null, [7, 2.5], [12, 2.5]]
+            }
+        ];
+
+        beforeEach(function () {
+            div = d3.select('body').append('div');
+            $(div.node()).width(640).height(480);
+        });
+
+        it('should render a canvas', function() {
+            var options = {
+                legend: {
+                    statements: [
+                        {
+                            metric: 'main',
+                            value: '%g nominal Watts'
+                        },
+                        {
+                            metric: 'main',
+                            aggregation: 'AVERAGE',
+                            value: 'Avg: %8.2lf %s'
+                        },
+                        {
+                            metric: 'main',
+                            aggregation: 'MIN',
+                            value: 'Min: %8.2lf %s'
+                        },
+                        {
+                            metric: 'main',
+                            aggregation: 'MAX',
+                            value: 'Max: %8.2lf %s\n'
+                        }
+                    ]
+                }
+            };
+
+            $.plot(div.node(), series, options);
+
+            setTimeout(function(){
+                var html = "" + div.node().innerHTML;
+                expect(html).toContain("canvas");
+
+                done();
+            }, 500);
+        });
+
+        it('should throw an error if a statement references a series that does exist', function() {
+            var options = {
+                legend: {
+                    statements: [
+                        {
+                            metric: '!main!',
+                            value: '%g nominal Watts'
+                        }
+                    ]
+                }
+            };
+
+            expect(function() {
+                $.plot(div.node(), series, options);
+            }).toThrow();
+        });
+    });
 });

@@ -1,5 +1,7 @@
 (function ($) {
 
+"use strict";
+
 var options = {
     legend: {
         statements: [],
@@ -11,12 +13,19 @@ var options = {
         },
         style: {
             fontSize: 10,
-            spaceWidth: 5,
             badgeSize: 10,
             lineSpacing: 5
         }
     }
 };
+
+var TOKENS = Object.freeze({
+    'Badge': 'badge',
+    'Text': 'text',
+    'Unit': 'unit',
+    'Lf': 'lf',
+    'Newline': 'newline'
+});
 
 function getLineWidth(options) {
     return options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
@@ -46,52 +55,57 @@ function calculateLegendHeight(options) {
     return numberOfLines * lineWidth + options.legend.margin.top + options.legend.margin.bottom;
 }
 
-function tokenizeStatement(statement) {
+function tokenizeStatement(value) {
 
-    var hasBadgeToken = false;
-    var hasLfToken = false;
-    var hasUnitToken = false;
+    var stack = [], tokens = [], types = {}, lfRegex = /^%(\d*)(\.(\d+))?lf/;
 
-    var state = 0, stack = [], tokens = [];
+    var accountForTokenType = function(type) {
+        if (types.hasOwnProperty(type)) {
+            types[type] += 1;
+        } else {
+            types[type] = 1;
+        }
+    };
 
-    for (var i = 0, len = statement.value.length; i < len; i++) {
+    var numTokensWithType = function(type) {
+        return types.hasOwnProperty(type) ? types[type] : 0;
+    };
 
-        // The next index, bounded by the size of the string
-        var nexti = Math.min(i+1, len - 1);
+    var pushToken = function(token) {
+        if (stack.length > 0) {
+            tokens.push({
+                type: TOKENS.Text,
+                value: stack.join('')
+            });
+            stack = [];
+            accountForTokenType(TOKENS.Text);
+        }
 
-        var c = statement.value[i];
-        var nextc = statement.value[nexti];
+        if (token !== undefined) {
+            tokens.push(token);
+            accountForTokenType(token.type);
+        }
+    };
+
+    for (var i = 0, len = value.length; i < len; i++) {
+
+        var c = value[i];
+        // Grab the next character, bounded by the size of the string
+        var nextc = value[Math.min(i+1, len - 1)];
+        var match;
 
         if (c === '%' && nextc === 'g') {
 
-            if (stack.length > 0) {
-                tokens.push({
-                    type: 'text',
-                    value: stack.join('')
-                });
-                stack = [];
-            }
-            tokens.push({
-                type: 'badge'
+            pushToken({
+                type: TOKENS.Badge
             });
-
-            hasBadgeToken = true;
 
             i++;
         } else if (c === '%' && nextc === 's') {
 
-            if (stack.length > 0) {
-                tokens.push({
-                    type: 'text',
-                    value: stack.join('')
-                });
-                stack = [];
-            }
-            tokens.push({
-                type: 'unit'
+            pushToken({
+                type: TOKENS.Unit
             });
-
-            hasUnitToken = true;
 
             i++;
         } else if (c === '%' && nextc === '%') {
@@ -100,43 +114,31 @@ function tokenizeStatement(statement) {
 
             i++;
         } else if (c == '\\' && nextc == 'n') {
-            if (stack.length > 0) {
-                tokens.push({
-                    type: 'text',
-                    value: stack.join('')
-                });
-                stack = [];
-            }
-            tokens.push({
-                type: 'newline'
+
+            pushToken({
+                type: TOKENS.Newline
             });
 
             i++;
-        } else if (statement.value.slice(i).match(/^%(\d*)\.\d+lf/) !== null) {
-            var slice = statement.value.slice(i);
-
-            var regex = /^%(\d*)\.(\d+)lf/;
-
-            var match = regex.exec(slice);
-
-            var length = match[1];
-            var precision = match[2];
-
-            if (stack.length > 0) {
-                tokens.push({
-                    type: 'text',
-                    value: stack.join('')
-                });
-                stack = [];
+        } else if ( (match = lfRegex.exec(value.slice(i))) !== null) {
+            var length = NaN;
+            try {
+                length = parseInt(match[1]);
+            } catch(err) {
+                // pass
+            }
+            var precision = NaN;
+            try {
+                precision = parseInt(match[3]);
+            } catch(err) {
+                // pass
             }
 
-            tokens.push({
-                type: 'lf',
-                length: length !== null ? parseInt(length) : -1,
-                precision: parseInt(precision)
+            pushToken({
+                type: TOKENS.Lf,
+                length: isNaN(length) ? null : length,
+                precision: isNaN(precision) ? null : precision
             });
-
-            hasLfToken = true;
 
             i += match[0].length - 1;
         } else {
@@ -145,46 +147,29 @@ function tokenizeStatement(statement) {
     }
 
     // Always add a space to the end of the statement if there was a badge printed
-    if (hasBadgeToken) {
+    if (numTokensWithType(TOKENS.Badge) > 0) {
         stack.push(" ");
     }
 
     // Add a space after the %lf statement if there is no unit
-    if (hasLfToken && !hasUnitToken && tokens[tokens.length - 1].type === "lf") {
+    if (numTokensWithType(TOKENS.Lf) > 0 && numTokensWithType(TOKENS.Unit) === 0 && tokens[tokens.length - 1].type === TOKENS.Lf) {
         stack.push(" ");
     }
 
-    if (stack.length > 0) {
-        tokens.push({
-            type: 'text',
-            value: stack.join('')
-        });
-    }
-
-    // console.log("'" + statement.value + "'");
-    // console.log(JSON.stringify(tokens));
+    // Convert any remaining characters on the stack to a text token
+    pushToken();
 
     return tokens;
 }
 
-function drawText(legendCtx, fontSize, text) {
-    var canvasCtx = legendCtx.canvasCtx;
+function reduceWithAggregate(data, aggregation) {
 
-    canvasCtx.fillStyle="black";
-    canvasCtx.font = fontSize + "px Monospace";
-    canvasCtx.textAlign="left";
-    canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
-
-    var textSize = canvasCtx.measureText(text);
-    legendCtx.x += textSize.width;
-}
-
-function reduceWithAggregate(aggregation, series) {
-
-    var N = series.data.length, total = 0, y, yMin = NaN, yMax = NaN, last = NaN;
+    var i, N = data.length, total = 0, y, yMin = NaN, yMax = NaN;
 
     var getYFromPoint = function(point) {
-        if (point.length === 2) {
+        if (point === null) {
+            return NaN;
+        } else if (point.length === 2) {
             return point[1];
         } else if (point.length === 3) {
             return point[1] - point[2];
@@ -195,8 +180,8 @@ function reduceWithAggregate(aggregation, series) {
 
     if (aggregation === 'MIN') {
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        $.each(data, function(idx) {
+            y = getYFromPoint(data[idx]);
             if (isNaN(y)) {
                 return;
             }
@@ -208,8 +193,8 @@ function reduceWithAggregate(aggregation, series) {
 
     } else if (aggregation === 'MAX') {
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        $.each(data, function(idx) {
+            y = getYFromPoint(data[idx]);
             if (isNaN(y)) {
                 return;
             }
@@ -219,12 +204,12 @@ function reduceWithAggregate(aggregation, series) {
         });
         return yMax;
 
-    } else if (aggregation === "AVERAGE" || aggregation === "AVG") {
+    } else if (aggregation === 'AVERAGE' || aggregation === 'AVG') {
 
         N = 0;
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        $.each(data, function(idx) {
+            y = getYFromPoint(data[idx]);
             if (isNaN(y)) {
                 return;
             }
@@ -234,16 +219,16 @@ function reduceWithAggregate(aggregation, series) {
 
         return N > 0 ? total / N : NaN;
 
-    } else if (aggregation === "LAST") {
+    } else if (aggregation === 'LAST') {
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        for(i = N-1; i >= 0; i--) {
+            y = getYFromPoint(data[i]);
             if (!isNaN(y)) {
-                last = y;
+                return y;
             }
-        });
+        }
 
-        return last;
+        return NaN;
 
     } else {
         throw "Unsupported aggregation: " + aggregation;
@@ -253,7 +238,6 @@ function reduceWithAggregate(aggregation, series) {
 function drawStatement(statement, legendCtx, options, allSeries) {
 
     var canvasCtx = legendCtx.canvasCtx;
-    var spaceWidth = options.legend.style.spaceWidth;
     var badgeSize = options.legend.style.badgeSize;
     var fontSize = options.legend.style.fontSize;
 
@@ -265,11 +249,13 @@ function drawStatement(statement, legendCtx, options, allSeries) {
             }
         });
 
-        $.each(options.hiddenSeries, function(idx) {
-            if (options.hiddenSeries[idx].metric === statement.metric) {
-                series = options.hiddenSeries[idx];
-            }
-        });
+        if (options.hiddenSeries !== undefined) {
+            $.each(options.hiddenSeries, function(idx) {
+                if (options.hiddenSeries[idx].metric === statement.metric) {
+                    series = options.hiddenSeries[idx];
+                }
+            });
+        }
 
         if (series === undefined) {
             throw "No series with metric '" + statement.metric + "' was found.";
@@ -277,15 +263,15 @@ function drawStatement(statement, legendCtx, options, allSeries) {
     }
 
     var lastSymbol = "";
-    var tokens = tokenizeStatement(statement);
+    var tokens = tokenizeStatement(statement.value);
     $.each(tokens, function(idx) {
         var token = tokens[idx];
 
-        if (token.type === 'text') {
+        if (token.type === TOKENS.Text) {
 
             drawText(legendCtx, fontSize, token.value);
 
-        } else if (token.type === 'badge') {
+        } else if (token.type === TOKENS.Badge) {
 
             canvasCtx.fillStyle=series.color;
             canvasCtx.fillRect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
@@ -298,12 +284,12 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             legendCtx.x += badgeSize;
 
-        } else if (token.type === 'newline') {
+        } else if (token.type === TOKENS.Newline) {
 
             legendCtx.y += getLineWidth(options);
             legendCtx.x = legendCtx.xMin;
 
-        } else if (token.type === 'unit') {
+        } else if (token.type === TOKENS.Unit) {
 
             if (lastSymbol === "") {
                 lastSymbol = " ";
@@ -311,9 +297,9 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             drawText(legendCtx, fontSize, lastSymbol + " ");
 
-        } else if (token.type === 'lf') {
+        } else if (token.type === TOKENS.Lf) {
 
-            var value = reduceWithAggregate(statement.aggregation, series);
+            var value = reduceWithAggregate(series.data, statement.aggregation);
             var scaledValue = value;
             lastSymbol = "";
 
@@ -340,6 +326,18 @@ function drawStatement(statement, legendCtx, options, allSeries) {
             throw "Unsupported token: " + JSON.stringify(token);
         }
     });
+}
+
+function drawText(legendCtx, fontSize, text) {
+    var canvasCtx = legendCtx.canvasCtx;
+
+    canvasCtx.fillStyle="black";
+    canvasCtx.font = fontSize + "px Monospace";
+    canvasCtx.textAlign="left";
+    canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
+
+    var textSize = canvasCtx.measureText(text);
+    legendCtx.x += textSize.width;
 }
 
 function init(plot) {

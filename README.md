@@ -20,35 +20,39 @@ Leverage the existing legend and GPRINT syntax used by rrdgraph to render custom
 ## Configuration
 
 ```
-series = [
-  {
-    id: 'main',
-    color: '#feeded',
-    data: [[0,0,0], [0,0,0] ...]
-  }
-]
-
-legend: {
-  statements: [
+var series = [
     {
-      metric: 'main',
-      value: '%g nominal Watts'
-    },
-    {
-      metric: 'main',
-      aggregation: 'AVERAGE',
-      value: 'Avg: %8.2lf %s'
-    },
-    {
-      metric: 'main',
-      aggregation: 'MIN',
-      value: 'Min: %8.2lf %s'
-    },
-    {
-      metric: 'main',
-      aggregation: 'MAX',
-      value: 'Max: %8.2lf %s\n'
+        metric: 'main',
+        color: '#feeded',
+        data: [[0,0,0], [0,0,0], ...]
     }
-  ]
-}
+];
+
+var options = {
+    legend: {
+        statements: [
+            {
+                metric: 'main',
+                value: '%g nominal Watts'
+            },
+            {
+                metric: 'main',
+                aggregation: 'AVERAGE',
+                value: 'Avg: %8.2lf %s'
+            },
+            {
+                metric: 'main',
+                aggregation: 'MIN',
+                value: 'Min: %8.2lf %s'
+            },
+            {
+                metric: 'main',
+                aggregation: 'MAX',
+                value: 'Max: %8.2lf %s\n'
+            }
+        ]
+    }
+};
+
+$.plot('#placeholder', series, options);
 ```
