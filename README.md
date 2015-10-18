@@ -19,7 +19,7 @@ Leverage the existing legend and GPRINT syntax used by rrdgraph to render custom
 
 ## Configuration
 
-```
+```javascript
 var series = [
     {
         metric: 'main',
