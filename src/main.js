@@ -11,7 +11,6 @@ var options = {
         },
         style: {
             fontSize: 10,
-            spaceWidth: 5,
             badgeSize: 10,
             lineSpacing: 5
         }
@@ -235,7 +234,6 @@ function reduceWithAggregate(data, aggregation) {
 function drawStatement(statement, legendCtx, options, allSeries) {
 
     var canvasCtx = legendCtx.canvasCtx;
-    var spaceWidth = options.legend.style.spaceWidth;
     var badgeSize = options.legend.style.badgeSize;
     var fontSize = options.legend.style.fontSize;
 
