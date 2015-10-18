@@ -112,7 +112,67 @@ describe('jquery.flot.legend', function () {
         });
     });
 
-    describe('rendering', function() {
+    describe('.renderStatement', function() {
+        it('should be able to render Lf and Unit statements', function () {
+
+            var stmt = {
+                metric: 'main',
+                aggregation: 'AVERAGE',
+                value: 'Avg: %8.2lf %s\\n'
+            };
+
+            var series = {
+                    metric: 'main',
+                    color: '#feeded',
+                    data: [[0,0], [1,1], [2,2], [3,3], [4,4], [5,500000]]
+            };
+
+            var renderer = {texts: []};
+            renderer.drawText = function(text) {
+              this.texts.push(text);
+            };
+            renderer.drawNewline = function() {
+                this.texts.push('\n');
+            };
+
+            renderStatement(stmt, series, renderer);
+
+            expect(renderer.texts.length).toBe(5);
+            expect(renderer.texts[0]).toBe('Avg: ');
+            expect(renderer.texts[1]).toBe('   83.33');
+            expect(renderer.texts[2]).toBe(' ');
+            expect(renderer.texts[3]).toBe('k ');
+            expect(renderer.texts[4]).toBe('\n');
+        });
+    });
+
+    describe('CanvasLegend renderer', function() {
+        var opts = JSON.parse(JSON.stringify(options));
+
+        describe('.getLineWidth', function() {
+            it('should return a sensible default', function () {
+
+                var renderer = new CanvasLegend(null, opts);
+                expect(renderer.getLineWidth()).toBe(15);
+            });
+        });
+
+        describe('.getLegendHeight', function() {
+            it('should return a sensible default', function () {
+
+                opts.legend.statements = [
+                    {
+                        value: '!'
+                    }
+                ];
+
+                var renderer = new CanvasLegend(null, opts);
+                expect(renderer.getLegendHeight()).toBe(15);
+            });
+        });
+    });
+
+    describe('flot integration', function() {
         var div;
 
         var series = [
