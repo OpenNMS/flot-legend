@@ -89,6 +89,35 @@ describe('jquery.flot.legend', function () {
         });
     });
 
+    describe('.getSeriesWithMetricName', function() {
+        it('should be able to retrieve series by metric name', function () {
+
+            var allSeries = [
+                {
+                    metric: 'xx',
+                    id: 'xx'
+                }
+            ];
+
+            var options = {
+                hiddenSeries: [{
+                    metric: 'yy',
+                    id: 'yy'
+                }]
+            };
+
+            expect(getSeriesWithMetricName('xx', allSeries, options).id).toBe('xx');
+            expect(getSeriesWithMetricName('yy', allSeries, options).id).toBe('yy');
+        });
+
+        it('should throw an exception if a series with the specified name does not exist', function () {
+
+            expect(function() {
+                getSeriesWithMetricName('zz', [], {});
+            }).toThrow();
+        });
+    });
+
     describe('rendering', function() {
         var div;
 

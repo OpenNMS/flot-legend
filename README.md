@@ -28,6 +28,13 @@ var series = [
     }
 ];
 
+var hiddenSeries = [
+    {
+        metric: 'other',
+        data: [[0,0,0], [0,0,0], ...]
+    }
+];
+
 var options = {
     legend: {
         statements: [
@@ -49,9 +56,15 @@ var options = {
                 metric: 'main',
                 aggregation: 'MAX',
                 value: 'Max: %8.2lf %s\n'
-            }
+            },
+            {
+                metric: 'other',
+                aggregation: 'AVERAGE',
+                value: 'Other - Avg: %8.2lf %s\n'
+            },
         ]
-    }
+    },
+    hiddenSeries: hiddenSeries
 };
 
 $.plot('#placeholder', series, options);

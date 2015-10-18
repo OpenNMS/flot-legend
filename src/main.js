@@ -233,35 +233,47 @@ function reduceWithAggregate(data, aggregation) {
     }
 }
 
+function getSeriesWithMetricName(metric, allSeries, options) {
+
+    var series;
+
+    $.each(allSeries, function(idx) {
+        if (allSeries[idx].metric === metric) {
+            series = allSeries[idx];
+        }
+    });
+
+    if (series === undefined && options.hiddenSeries !== undefined) {
+        $.each(options.hiddenSeries, function(idx) {
+            if (options.hiddenSeries[idx].metric === metric) {
+                series = options.hiddenSeries[idx];
+            }
+        });
+    }
+
+    if (series === undefined) {
+        throw "No series with metric '" + statement.metric + "' was found.";
+    } else {
+        return series;
+    }
+}
+
 function drawStatement(statement, legendCtx, options, allSeries) {
 
     var canvasCtx = legendCtx.canvasCtx;
     var badgeSize = options.legend.style.badgeSize;
     var fontSize = options.legend.style.fontSize;
 
+    // Find the series with the metric name if it's defined, not all statements need an associated metric
     var series = undefined;
     if (statement.metric !== undefined) {
-        $.each(allSeries, function(idx) {
-            if (allSeries[idx].metric === statement.metric) {
-                series = allSeries[idx];
-            }
-        });
-
-        if (options.hiddenSeries !== undefined) {
-            $.each(options.hiddenSeries, function(idx) {
-                if (options.hiddenSeries[idx].metric === statement.metric) {
-                    series = options.hiddenSeries[idx];
-                }
-            });
-        }
-
-        if (series === undefined) {
-            throw "No series with metric '" + statement.metric + "' was found.";
-        }
+        series = getSeriesWithMetricName(statement.metric, allSeries, options);
     }
 
-    var lastSymbol = "";
+    // Parse the statement into a series of tokens
     var tokens = tokenizeStatement(statement.value);
+    // Used to store the unit symbol from the last LF statement, we need this in the following UNIT statement
+    var lastSymbol = null;
     $.each(tokens, function(idx) {
         var token = tokens[idx];
 
@@ -271,12 +283,12 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
         } else if (token.type === TOKENS.Badge) {
 
-            canvasCtx.fillStyle=series.color;
+            canvasCtx.fillStyle = series.color;
             canvasCtx.fillRect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
 
             canvasCtx.beginPath();
-            canvasCtx.lineWidth="0.5";
-            canvasCtx.strokeStyle="black";
+            canvasCtx.lineWidth = "0.5";
+            canvasCtx.strokeStyle = "black";
             canvasCtx.rect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
             canvasCtx.stroke();
 
@@ -289,7 +301,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
         } else if (token.type === TOKENS.Unit) {
 
-            if (lastSymbol === "") {
+            if (lastSymbol === null) {
                 lastSymbol = " ";
             }
 
@@ -299,7 +311,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             var value = reduceWithAggregate(series.data, statement.aggregation);
             var scaledValue = value;
-            lastSymbol = "";
+            lastSymbol = null;
 
             if (!isNaN(value)) {
                 var prefix = d3.formatPrefix(value, token.precision);
@@ -329,9 +341,9 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 function drawText(legendCtx, fontSize, text) {
     var canvasCtx = legendCtx.canvasCtx;
 
-    canvasCtx.fillStyle="black";
+    canvasCtx.fillStyle = "black";
     canvasCtx.font = fontSize + "px Monospace";
-    canvasCtx.textAlign="left";
+    canvasCtx.textAlign = "left";
     canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
 
     var textSize = canvasCtx.measureText(text);
