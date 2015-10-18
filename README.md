@@ -8,6 +8,21 @@ rrdgraph style legend support for Flot
 
 flot-legend can be used to render customizable legends to the chart canvas using syntax similar to rrdgraph's GPRINT.
 
+```
+AREA:float1#babdb6:"1  minute" \
+GPRINT:float1:AVERAGE:"Avg \\: %10.2lf" \
+GPRINT:float1:MIN:"Min \\: %10.2lf" \
+GPRINT:float1:MAX:"Max \\: %10.2lf\\n" \
+AREA:float5#888a85:"5  minute" \
+GPRINT:float5:AVERAGE:"Avg \\: %10.2lf" \
+GPRINT:float5:MIN:"Min \\: %10.2lf" \
+GPRINT:float5:MAX:"Max \\: %10.2lf\\n" \
+LINE2:float15#a40000:"15 minute" \
+GPRINT:float15:AVERAGE:"Avg \\: %10.2lf" \
+GPRINT:float15:MIN:"Min \\: %10.2lf" \
+GPRINT:float15:MAX:"Max \\: %10.2lf\\n"
+```
+
 ## Configuration
 
 ```javascript
