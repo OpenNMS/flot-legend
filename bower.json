@@ -4,6 +4,7 @@
   "version": "1.0.0-SNAPSHOT",
   "homepage": "https://github.com/j-white/flot-legend",
   "dependencies": {
-    "flot": "~0.8.3"
+    "flot": "~0.8.3",
+    "d3": "~3.5.6"
   }
 }

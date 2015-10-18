@@ -14,6 +14,7 @@ module.exports = function(config) {
 
         // list of files / patterns to load in the browser - order matters
         files: [
+            'bower_components/d3/d3.min.js',
             'bower_components/jquery/dist/jquery.min.js',
             'bower_components/flot/jquery.flot.js',
             'src/main.js',
