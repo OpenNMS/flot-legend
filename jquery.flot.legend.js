@@ -1,7 +1,5 @@
 (function ($) {
-
-"use strict";
-
+ "use strict";
 var options = {
     legend: {
         statements: [],
@@ -26,20 +24,29 @@ var TOKENS = Object.freeze({
     'Lf': 'lf',
     'Newline': 'newline'
 });
+CanvasLegend.prototype = {};
+CanvasLegend.prototype.constructor = CanvasLegend;
+function CanvasLegend(plot, opts) {
 
-function getLineWidth(options) {
-    return options.legend.style.lineSpacing + Math.max(options.legend.style.badgeSize, options.legend.style.fontSize);
+    this.plot = plot;
+    this.opts = opts;
+    this.badgeSize = this.opts.legend.style.badgeSize;
+    this.fontSize = this.opts.legend.style.fontSize;
+    this.lineWidth = this.getLineWidth();
 }
+CanvasLegend.prototype.getLineWidth = function() {
 
-function calculateLegendHeight(options) {
-    var lineWidth = getLineWidth(options);
+    return this.opts.legend.style.lineSpacing + Math.max(this.opts.legend.style.badgeSize, this.opts.legend.style.fontSize);
+};
+CanvasLegend.prototype.getLegendHeight = function() {
 
     // Count the number of lines
     var numberOfLines = 0;
     var numberOfStatementsOnNewline = 0;
 
-    $.each(options.legend.statements, function(idx) {
-        var statement = options.legend.statements[idx];
+    var self = this;
+    $.each(this.opts.legend.statements, function(idx) {
+        var statement = self.opts.legend.statements[idx];
         if (statement.value.indexOf("\\n") > -1) {
             numberOfLines++;
             numberOfStatementsOnNewline = 0;
@@ -52,9 +59,55 @@ function calculateLegendHeight(options) {
         numberOfLines++;
     }
 
-    return numberOfLines * lineWidth + options.legend.margin.top + options.legend.margin.bottom;
-}
+    return numberOfLines * this.lineWidth + options.legend.margin.top + options.legend.margin.bottom;
+};
+CanvasLegend.prototype.beforeDraw = function() {
 
+    this.ctx = this.plot.getCanvas().getContext('2d');
+
+    // Outer bounds
+    this.xMin = this.opts.legend.margin.left;
+    this.yMin = this.ctx.canvas.clientHeight - this.getLegendHeight() + this.opts.legend.margin.top;
+    //this.xMax = ctx.canvasCtx.canvas.clientWidth - this.opts.legend.margin.right;
+    //this.yMax = ctx.canvasCtx.canvas.clientHeight - this.opts.legend.margin.bottom;
+
+    // Initial coordinates
+    this.x = this.xMin;
+    this.y = this.yMin;
+};
+CanvasLegend.prototype.drawText = function(text) {
+
+    this.ctx.fillStyle = "black";
+    this.ctx.font = this.fontSize + "px Monospace";
+    this.ctx.textAlign = "left";
+    this.ctx.fillText(text, this.x, this.y + this.fontSize);
+
+    var textSize = this.ctx.measureText(text);
+    this.x += textSize.width;
+};
+CanvasLegend.prototype.drawBadge = function(color) {
+
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(this.x, this.y, this.badgeSize, this.badgeSize);
+
+    this.ctx.beginPath();
+    this.ctx.lineWidth = "0.5";
+    this.ctx.strokeStyle = "black";
+    this.ctx.rect(this.x, this.y, this.badgeSize, this.badgeSize);
+    this.ctx.stroke();
+
+    this.ctx.x += this.badgeSize;
+    this.drawText(" ");
+};
+CanvasLegend.prototype.drawNewline = function() {
+
+    this.y = this.lineWidth + this.y;
+    this.x = this.xMin;
+};
+CanvasLegend.prototype.afterDraw = function() {
+
+    this.ctx.save();
+};
 function tokenizeStatement(value) {
 
     var stack = [], tokens = [], types = {}, lfRegex = /^%(\d*)(\.(\d+))?lf/;
@@ -235,73 +288,65 @@ function reduceWithAggregate(data, aggregation) {
     }
 }
 
-function drawStatement(statement, legendCtx, options, allSeries) {
+function getSeriesWithMetricName(metric, allSeries, options) {
 
-    var canvasCtx = legendCtx.canvasCtx;
-    var badgeSize = options.legend.style.badgeSize;
-    var fontSize = options.legend.style.fontSize;
+    var series;
 
-    var series = undefined;
-    if (statement.metric !== undefined) {
-        $.each(allSeries, function(idx) {
-            if (allSeries[idx].metric === statement.metric) {
-                series = allSeries[idx];
+    $.each(allSeries, function(idx) {
+        if (allSeries[idx].metric === metric) {
+            series = allSeries[idx];
+        }
+    });
+
+    if (series === undefined && options.hiddenSeries !== undefined) {
+        $.each(options.hiddenSeries, function(idx) {
+            if (options.hiddenSeries[idx].metric === metric) {
+                series = options.hiddenSeries[idx];
             }
         });
-
-        if (options.hiddenSeries !== undefined) {
-            $.each(options.hiddenSeries, function(idx) {
-                if (options.hiddenSeries[idx].metric === statement.metric) {
-                    series = options.hiddenSeries[idx];
-                }
-            });
-        }
-
-        if (series === undefined) {
-            throw "No series with metric '" + statement.metric + "' was found.";
-        }
     }
 
-    var lastSymbol = "";
+    if (series === undefined) {
+        throw "No series with metric '" + statement.metric + "' was found.";
+    } else {
+        return series;
+    }
+}
+
+function renderStatement(statement, series, renderer) {
+
+    // Parse the statement into a series of tokens
     var tokens = tokenizeStatement(statement.value);
+    // Used to store the unit symbol from the last LF statement, we need this in the following UNIT statement
+    var lastSymbol = null;
     $.each(tokens, function(idx) {
         var token = tokens[idx];
 
         if (token.type === TOKENS.Text) {
 
-            drawText(legendCtx, fontSize, token.value);
+            renderer.drawText(token.value);
 
         } else if (token.type === TOKENS.Badge) {
 
-            canvasCtx.fillStyle=series.color;
-            canvasCtx.fillRect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
-
-            canvasCtx.beginPath();
-            canvasCtx.lineWidth="0.5";
-            canvasCtx.strokeStyle="black";
-            canvasCtx.rect(legendCtx.x, legendCtx.y, badgeSize, badgeSize);
-            canvasCtx.stroke();
-
-            legendCtx.x += badgeSize;
+            renderer.drawBadge(series.color);
 
         } else if (token.type === TOKENS.Newline) {
 
-            legendCtx.y += getLineWidth(options);
-            legendCtx.x = legendCtx.xMin;
+            renderer.drawNewline();
 
         } else if (token.type === TOKENS.Unit) {
 
-            if (lastSymbol === "") {
+            if (lastSymbol === null) {
                 lastSymbol = " ";
             }
 
-            drawText(legendCtx, fontSize, lastSymbol + " ");
+            renderer.drawText( lastSymbol + " ");
 
         } else if (token.type === TOKENS.Lf) {
 
             var value = reduceWithAggregate(series.data, statement.aggregation);
             var scaledValue = value;
-            lastSymbol = "";
+            lastSymbol = null;
 
             if (!isNaN(value)) {
                 var prefix = d3.formatPrefix(value, token.precision);
@@ -320,24 +365,12 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
             format = d3.format(format);
 
-            drawText(legendCtx, fontSize, format(scaledValue));
+            renderer.drawText(format(scaledValue));
 
         } else {
             throw "Unsupported token: " + JSON.stringify(token);
         }
     });
-}
-
-function drawText(legendCtx, fontSize, text) {
-    var canvasCtx = legendCtx.canvasCtx;
-
-    canvasCtx.fillStyle="black";
-    canvasCtx.font = fontSize + "px Monospace";
-    canvasCtx.textAlign="left";
-    canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
-
-    var textSize = canvasCtx.measureText(text);
-    legendCtx.x += textSize.width;
 }
 
 function init(plot) {
@@ -350,32 +383,28 @@ function init(plot) {
         // Hide the existing legend
         options.legend.show = false;
 
-        var legendHeight = calculateLegendHeight(options);
-        options.grid.margin.bottom += legendHeight;
+        var rendererType = CanvasLegend;
+        var renderer = new rendererType(plot, options);
+
+        // Shift the graph up by the legend height
+        options.grid.margin.bottom = renderer.getLegendHeight();
 
         plot.hooks.draw.push(function (plot) {
-            // Build a context that contains everything we need to draw the statements
-            var ctx = {};
-            ctx.canvasCtx = plot.getCanvas().getContext('2d');
-
-            // Outer bounds
-            ctx.xMin = options.legend.margin.left;
-            ctx.yMin = ctx.canvasCtx.canvas.clientHeight - legendHeight + options.legend.margin.top;
-            ctx.xMax = ctx.canvasCtx.canvas.clientWidth - options.legend.margin.right;
-            ctx.yMax = ctx.canvasCtx.canvas.clientHeight - options.legend.margin.bottom;
-
-            // Initial coordinates
-            ctx.x = ctx.xMin;
-            ctx.y = ctx.yMin;
-
-            // Draw!
+            // Render!
+            renderer.beforeDraw();
             var allSeries = plot.getData();
             $.each(options.legend.statements, function(idx) {
                 var statement = options.legend.statements[idx];
-                drawStatement(statement, ctx, options, allSeries);
-            });
 
-            ctx.canvasCtx.save();
+                // Find the series with the metric name if it's defined, not all statements need an associated metric
+                var series = undefined;
+                if (statement.metric !== undefined) {
+                    series = getSeriesWithMetricName(statement.metric, allSeries, options);
+                }
+
+                renderStatement(statement, series, renderer);
+            });
+            renderer.afterDraw();
         });
     });
 }
