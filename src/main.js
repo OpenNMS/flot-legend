@@ -208,7 +208,7 @@ function renderStatement(statement, series, renderer) {
     // Parse the statement into a series of tokens
     var tokens = tokenizeStatement(statement.value);
     // Used to store the unit symbol from the last LF statement, we need this in the following UNIT statement
-    var lastSymbol = null;
+    var lastSymbol = "";
     $.each(tokens, function(idx) {
         var token = tokens[idx];
 
@@ -226,17 +226,17 @@ function renderStatement(statement, series, renderer) {
 
         } else if (token.type === TOKENS.Unit) {
 
-            if (lastSymbol === null) {
+            if (lastSymbol === "") {
                 lastSymbol = " ";
             }
 
-            renderer.drawText( lastSymbol + " ");
+            renderer.drawText(lastSymbol + " ");
 
         } else if (token.type === TOKENS.Lf) {
 
             var value = reduceWithAggregate(series.data, statement.aggregation);
             var scaledValue = value;
-            lastSymbol = null;
+            lastSymbol = "";
 
             if (!isNaN(value)) {
                 var prefix = d3.formatPrefix(value, token.precision);
