@@ -2,20 +2,11 @@
 
 rrdgraph style legend support for Flot
 
-## Motivation
+![](https://raw.githubusercontent.com/j-white/flot-legend/gh-pages/example.png)
 
-Leverage the existing legend and GPRINT syntax used by rrdgraph to render customizable legends.
+## About
 
-```
- LINE2:main#438219:"nominal Watts" \
- GPRINT:main:AVERAGE:" Avg\\: %8.2lf %s" \
- GPRINT:main:MIN:"Min\\: %8.2lf %s" \
- GPRINT:main:MAX:"Max\\: %8.2lf %s\\n" \
- LINE2:consumed#ff0000:"used Watts    " \
- GPRINT:consumed:AVERAGE:"Avg\\: %8.2lf %s" \
- GPRINT:consumed:MIN:"Min\\: %8.2lf %s" \
- GPRINT:consumed:MAX:"Max\\: %8.2lf %s\\n"
-```
+flot-legend can be used to render customizable legends to the chart canvas using syntax similar to rrdgraph's GPRINT.
 
 ## Configuration
 
