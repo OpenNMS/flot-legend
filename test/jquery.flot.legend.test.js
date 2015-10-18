@@ -56,4 +56,35 @@ describe('jquery.flot.legend', function () {
             expect(tokens[1].value).toBe(' ');
         });
     });
+
+    describe('.reduceWithAggregate', function() {
+        var dataWithNaNs = [
+            [0,0],
+            [1,1],
+            [2,NaN],
+            [3,3]
+        ];
+
+        var stackedDataWithNaNs = [
+            [0,1,1],
+            [1,3,2],
+            [2,NaN,NaN],
+            [3,6,3]
+        ];
+
+        it('should support MIN, MAX, AVERAGE and LAST aggregation functions', function () {
+            expect(reduceWithAggregate(dataWithNaNs, 'MIN')).toBeCloseTo(0, 0.0001);
+            expect(reduceWithAggregate(dataWithNaNs, 'MAX')).toBeCloseTo(3, 0.0001);
+            expect(reduceWithAggregate(dataWithNaNs, 'AVERAGE')).toBeCloseTo(1.3333, 0.0001);
+            expect(reduceWithAggregate(dataWithNaNs, 'LAST')).toBeCloseTo(3, 0.0001);
+        });
+
+        it('should support MIN, MAX, AVERAGE and LAST aggregation functions on stacked data', function () {
+            expect(reduceWithAggregate(stackedDataWithNaNs, 'MIN')).toBeCloseTo(0, 0.0001);
+            expect(reduceWithAggregate(stackedDataWithNaNs, 'MAX')).toBeCloseTo(3, 0.0001);
+            expect(reduceWithAggregate(stackedDataWithNaNs, 'AVERAGE')).toBeCloseTo(1.3333, 0.0001);
+            expect(reduceWithAggregate(stackedDataWithNaNs, 'LAST')).toBeCloseTo(3, 0.0001);
+        });
+    });
+
 });

@@ -161,21 +161,9 @@ function tokenizeStatement(value) {
     return tokens;
 }
 
-function drawText(legendCtx, fontSize, text) {
-    var canvasCtx = legendCtx.canvasCtx;
+function reduceWithAggregate(data, aggregation) {
 
-    canvasCtx.fillStyle="black";
-    canvasCtx.font = fontSize + "px Monospace";
-    canvasCtx.textAlign="left";
-    canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
-
-    var textSize = canvasCtx.measureText(text);
-    legendCtx.x += textSize.width;
-}
-
-function reduceWithAggregate(aggregation, series) {
-
-    var N = series.data.length, total = 0, y, yMin = NaN, yMax = NaN, last = NaN;
+    var i, N = data.length, total = 0, y, yMin = NaN, yMax = NaN;
 
     var getYFromPoint = function(point) {
         if (point.length === 2) {
@@ -189,8 +177,8 @@ function reduceWithAggregate(aggregation, series) {
 
     if (aggregation === 'MIN') {
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        $.each(data, function(idx) {
+            y = getYFromPoint(data[idx]);
             if (isNaN(y)) {
                 return;
             }
@@ -202,8 +190,8 @@ function reduceWithAggregate(aggregation, series) {
 
     } else if (aggregation === 'MAX') {
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        $.each(data, function(idx) {
+            y = getYFromPoint(data[idx]);
             if (isNaN(y)) {
                 return;
             }
@@ -213,12 +201,12 @@ function reduceWithAggregate(aggregation, series) {
         });
         return yMax;
 
-    } else if (aggregation === "AVERAGE" || aggregation === "AVG") {
+    } else if (aggregation === 'AVERAGE' || aggregation === 'AVG') {
 
         N = 0;
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        $.each(data, function(idx) {
+            y = getYFromPoint(data[idx]);
             if (isNaN(y)) {
                 return;
             }
@@ -228,16 +216,16 @@ function reduceWithAggregate(aggregation, series) {
 
         return N > 0 ? total / N : NaN;
 
-    } else if (aggregation === "LAST") {
+    } else if (aggregation === 'LAST') {
 
-        $.each(series.data, function(idx) {
-            y = getYFromPoint(series.data[idx]);
+        for(i = N-1; i >= 0; i++) {
+            y = getYFromPoint(data[i]);
             if (!isNaN(y)) {
-                last = y;
+                return y;
             }
-        });
+        }
 
-        return last;
+        return NaN;
 
     } else {
         throw "Unsupported aggregation: " + aggregation;
@@ -307,7 +295,7 @@ function drawStatement(statement, legendCtx, options, allSeries) {
 
         } else if (token.type === TOKENS.Lf) {
 
-            var value = reduceWithAggregate(statement.aggregation, series);
+            var value = reduceWithAggregate(series.data, statement.aggregation);
             var scaledValue = value;
             lastSymbol = "";
 
@@ -334,6 +322,18 @@ function drawStatement(statement, legendCtx, options, allSeries) {
             throw "Unsupported token: " + JSON.stringify(token);
         }
     });
+}
+
+function drawText(legendCtx, fontSize, text) {
+    var canvasCtx = legendCtx.canvasCtx;
+
+    canvasCtx.fillStyle="black";
+    canvasCtx.font = fontSize + "px Monospace";
+    canvasCtx.textAlign="left";
+    canvasCtx.fillText(text, legendCtx.x, legendCtx.y + fontSize);
+
+    var textSize = canvasCtx.measureText(text);
+    legendCtx.x += textSize.width;
 }
 
 function init(plot) {
