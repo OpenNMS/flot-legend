@@ -245,10 +245,10 @@ function renderStatement(statement, series, renderer) {
             }
 
             var format = "";
-            if (!isNaN(token.length)) {
+            if (token.length !== null) {
                 format += token.length;
             }
-            if (!isNaN(token.precision)) {
+            if (token.precision !== null) {
                 format += "." + token.precision;
             }
             format += "f";

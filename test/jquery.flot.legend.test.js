@@ -144,6 +144,38 @@ describe('jquery.flot.legend', function () {
             expect(renderer.texts[3]).toBe('k ');
             expect(renderer.texts[4]).toBe('\n');
         });
+
+        it('should be able to render Lf statements without the length modifier', function () {
+
+            var stmt = {
+                metric: 'main',
+                aggregation: 'AVERAGE',
+                value: 'Avg: %.2lf %s\\n'
+            };
+
+            var series = {
+                metric: 'main',
+                color: '#feeded',
+                data: [[0,0], [1,1], [2,2], [3,3], [4,4], [5,500000]]
+            };
+
+            var renderer = {texts: []};
+            renderer.drawText = function(text) {
+                this.texts.push(text);
+            };
+            renderer.drawNewline = function() {
+                this.texts.push('\n');
+            };
+
+            renderStatement(stmt, series, renderer);
+
+            expect(renderer.texts.length).toBe(5);
+            expect(renderer.texts[0]).toBe('Avg: ');
+            expect(renderer.texts[1]).toBe('83.33');
+            expect(renderer.texts[2]).toBe(' ');
+            expect(renderer.texts[3]).toBe('k ');
+            expect(renderer.texts[4]).toBe('\n');
+        });
     });
 
     describe('CanvasLegend renderer', function() {
