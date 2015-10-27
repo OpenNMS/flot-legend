@@ -10,6 +10,7 @@ var options = {
         style: {
             fontSize: 10,
             badgeSize: 10,
+            badgeMarginRight: 1,
             lineSpacing: 5
         }
     }
