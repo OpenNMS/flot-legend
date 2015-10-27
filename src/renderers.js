@@ -7,9 +7,9 @@ function CanvasLegend(plot, opts) {
     this.badgeSize = this.opts.legend.style.badgeSize;
     this.badgeMarginRight = this.opts.legend.style.badgeMarginRight;
     this.fontSize = this.opts.legend.style.fontSize;
-    this.lineWidth = this.getLineWidth();
+    this.lineHeight = this.getLineHeight();
 }
-CanvasLegend.prototype.getLineWidth = function() {
+CanvasLegend.prototype.getLineHeight = function() {
 
     return this.opts.legend.style.lineSpacing + Math.max(this.opts.legend.style.badgeSize, this.opts.legend.style.fontSize);
 };
@@ -34,7 +34,7 @@ CanvasLegend.prototype.getLegendHeight = function() {
         numberOfLines++;
     }
 
-    return numberOfLines * this.lineWidth + options.legend.margin.top + options.legend.margin.bottom;
+    return numberOfLines * this.lineHeight + options.legend.margin.top + options.legend.margin.bottom;
 };
 CanvasLegend.prototype.beforeDraw = function() {
 
@@ -66,7 +66,7 @@ CanvasLegend.prototype.drawBadge = function(color) {
     this.ctx.fillRect(this.x, this.y, this.badgeSize, this.badgeSize);
 
     this.ctx.beginPath();
-    this.ctx.lineWidth = "0.5";
+    this.ctx.lineHeight = "0.5";
     this.ctx.strokeStyle = "black";
     this.ctx.rect(this.x, this.y, this.badgeSize, this.badgeSize);
     this.ctx.stroke();
@@ -75,7 +75,7 @@ CanvasLegend.prototype.drawBadge = function(color) {
 };
 CanvasLegend.prototype.drawNewline = function() {
 
-    this.y = this.lineWidth + this.y;
+    this.y = this.lineHeight + this.y;
     this.x = this.xMin;
 };
 CanvasLegend.prototype.afterDraw = function() {
