@@ -12,6 +12,7 @@ var options = {
         style: {
             fontSize: 10,
             badgeSize: 10,
+            badgeMarginRight: 1,
             lineSpacing: 5
         }
     }
@@ -31,6 +32,7 @@ function CanvasLegend(plot, opts) {
     this.plot = plot;
     this.opts = opts;
     this.badgeSize = this.opts.legend.style.badgeSize;
+    this.badgeMarginRight = this.opts.legend.style.badgeMarginRight;
     this.fontSize = this.opts.legend.style.fontSize;
     this.lineWidth = this.getLineWidth();
 }
@@ -96,8 +98,7 @@ CanvasLegend.prototype.drawBadge = function(color) {
     this.ctx.rect(this.x, this.y, this.badgeSize, this.badgeSize);
     this.ctx.stroke();
 
-    this.ctx.x += this.badgeSize;
-    this.drawText(" ");
+    this.x += this.badgeSize + this.badgeMarginRight;
 };
 CanvasLegend.prototype.drawNewline = function() {
 
