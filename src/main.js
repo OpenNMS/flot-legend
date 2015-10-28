@@ -279,22 +279,55 @@ function init(plot) {
         // Shift the graph up by the legend height
         options.grid.margin.bottom = renderer.getLegendHeight();
 
-        plot.hooks.draw.push(function (plot) {
-            // Render!
+        var doRender = function(data) {
             renderer.beforeDraw();
-            var allSeries = plot.getData();
             $.each(options.legend.statements, function(idx) {
                 var statement = options.legend.statements[idx];
 
                 // Find the series with the metric name if it's defined, not all statements need an associated metric
                 var series = undefined;
                 if (statement.metric !== undefined) {
-                    series = getSeriesWithMetricName(statement.metric, allSeries, options);
+                    series = getSeriesWithMetricName(statement.metric, data, options);
                 }
 
                 renderStatement(statement, series, renderer);
             });
             renderer.afterDraw();
+        };
+
+        plot.hooks.draw.push(function (plot) {
+            var canvasWidth = plot.getCanvas().clientWidth,
+                renderedWidth = 0,
+                options = plot.getOptions().legend,
+                fontSize = options.style.fontSize,
+                minFontSize = options.style.minFontSize,
+                data = plot.getData();
+
+            // console.log('canvas width: ' + canvasWidth);
+            // console.log('renderer:',renderer);
+            renderer.setDryRun(true);
+            do {
+                renderer.setFontSize(fontSize);
+                doRender(data);
+                renderedWidth = renderer.getMaxWidth();
+                // console.log('rendered width at font size ' + fontSize + ': ' + renderedWidth);
+                if (renderedWidth > canvasWidth) {
+                    if (fontSize === minFontSize) {
+                        //console.log('WARNING: minimum font size reached... giving up.');
+                        break;
+                    }
+                    fontSize--;
+                } else {
+                    break;
+                }
+            } while (renderedWidth > canvasWidth);
+
+            // console.log('final font size: ' + fontSize);
+            // console.log('final rendered width: ' + renderedWidth);
+            // console.log('rendering...');
+            renderer.setDryRun(false);
+            doRender(data);
+            // console.log('done');
         });
     });
 }
