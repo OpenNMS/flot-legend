@@ -181,11 +181,11 @@ describe('jquery.flot.legend', function () {
     describe('CanvasLegend renderer', function() {
         var opts = JSON.parse(JSON.stringify(options));
 
-        describe('.getLineWidth', function() {
+        describe('.getLineHeight', function() {
             it('should return a sensible default', function () {
 
                 var renderer = new CanvasLegend(null, opts);
-                expect(renderer.getLineWidth()).toBe(15);
+                expect(renderer.getLineHeight()).toBe(15);
             });
         });
 

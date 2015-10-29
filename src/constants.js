@@ -9,9 +9,12 @@ var options = {
         },
         style: {
             fontSize: 10,
-            badgeSize: 10,
-            badgeMarginRight: 1,
-            lineSpacing: 5
+            minFontSize: 3,
+            /*
+            badgeSize: =fontSize
+            badgeMarginRight: =fontSize*0.25 (no less than 1)
+            */
+            lineSpacing: 5,
         }
     }
 };
