@@ -13,6 +13,8 @@
     "karma": "~0.13.11",
     "karma-jasmine": "~0.3.6",
     "karma-phantomjs-launcher": "~0.2.1",
+    "jasmine-core": "~2.3.4",
+    "phantomjs": "~1.9.18",
     "bower": "~1.6.3"
   },
   "scripts": {
