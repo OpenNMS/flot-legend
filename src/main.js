@@ -63,6 +63,20 @@ function tokenizeStatement(value) {
             });
 
             i++;
+        } else if (c == '\\' && nextc == 'l') {
+
+            pushToken({
+                type: TOKENS.Newline
+            });
+
+            i++;
+        } else if (c == '\\' && nextc == 's') {
+
+            pushToken({
+                type: TOKENS.Newline
+            });
+
+            i++;
         } else if ( (match = lfRegex.exec(value.slice(i))) !== null) {
             var length = NaN;
             try {
@@ -273,8 +287,17 @@ function init(plot) {
         // Hide the existing legend
         options.legend.show = false;
 
+        // Tokenize all of the statements
+        var tokens = [];
+        $.each(options.legend.statements, function(idx) {
+            var statement = options.legend.statements[idx];
+            tokens.push(tokenizeStatement(statement.value));
+        });
+        // Flatten the array
+        tokens = Array.prototype.concat.apply([], tokens);
+
         var rendererType = CanvasLegend;
-        var renderer = new rendererType(plot, options);
+        var renderer = new rendererType(plot, options, tokens);
 
         // Shift the graph up by the legend height
         options.grid.margin.bottom = renderer.getLegendHeight();

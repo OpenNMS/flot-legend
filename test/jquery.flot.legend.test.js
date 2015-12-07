@@ -198,7 +198,10 @@ describe('jquery.flot.legend', function () {
                     }
                 ];
 
-                var renderer = new CanvasLegend(null, opts);
+                var renderer = new CanvasLegend(null, opts, [{
+                    type: TOKENS.Text,
+                    value: '!'
+                }]);
                 expect(renderer.getLegendHeight()).toBe(15);
             });
         });

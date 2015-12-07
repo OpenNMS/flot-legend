@@ -1,9 +1,10 @@
 CanvasLegend.prototype = {};
 CanvasLegend.prototype.constructor = CanvasLegend;
-function CanvasLegend(plot, opts) {
+function CanvasLegend(plot, opts, tokens) {
 
     this.plot = plot;
     this.opts = opts;
+    this.tokens = tokens;
     this.doRender = true;
     this.setFontSize(this.opts.legend.style.fontSize);
 }
@@ -49,20 +50,20 @@ CanvasLegend.prototype.getLegendHeight = function() {
 
     // Count the number of lines
     var numberOfLines = 0;
-    var numberOfStatementsOnNewline = 0;
+    var numberOfTokensOnNewline = 0;
 
     var self = this;
-    $.each(this.opts.legend.statements, function(idx) {
-        var statement = self.opts.legend.statements[idx];
-        if (statement.value.indexOf("\\n") > -1) {
+    $.each(self.tokens, function(idx) {
+        var token = self.tokens[idx];
+        if (self.tokens[idx].type === TOKENS.Newline) {
             numberOfLines++;
-            numberOfStatementsOnNewline = 0;
+            numberOfTokensOnNewline = 0;
         } else {
-            numberOfStatementsOnNewline++;
+            numberOfTokensOnNewline++;
         }
     });
 
-    if (numberOfStatementsOnNewline > 0) {
+    if (numberOfTokensOnNewline > 0) {
         numberOfLines++;
     }
 
