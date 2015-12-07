@@ -11,9 +11,12 @@ var options = {
         },
         style: {
             fontSize: 10,
-            badgeSize: 10,
-            badgeMarginRight: 1,
-            lineSpacing: 5
+            minFontSize: 3,
+            /*
+            badgeSize: =fontSize
+            badgeMarginRight: =fontSize*0.25 (no less than 1)
+            */
+            lineSpacing: 5,
         }
     }
 };
@@ -27,42 +30,76 @@ var TOKENS = Object.freeze({
 });
 CanvasLegend.prototype = {};
 CanvasLegend.prototype.constructor = CanvasLegend;
-function CanvasLegend(plot, opts) {
+function CanvasLegend(plot, opts, tokens) {
 
     this.plot = plot;
     this.opts = opts;
-    this.badgeSize = this.opts.legend.style.badgeSize;
-    this.badgeMarginRight = this.opts.legend.style.badgeMarginRight;
-    this.fontSize = this.opts.legend.style.fontSize;
-    this.lineWidth = this.getLineWidth();
+    this.tokens = tokens;
+    this.doRender = true;
+    this.setFontSize(this.opts.legend.style.fontSize);
 }
-CanvasLegend.prototype.getLineWidth = function() {
 
-    return this.opts.legend.style.lineSpacing + Math.max(this.opts.legend.style.badgeSize, this.opts.legend.style.fontSize);
+CanvasLegend.prototype.setDryRun = function(dryRun) {
+    this.doRender = !dryRun;
 };
+
+CanvasLegend.prototype.getFontSize = function() {
+
+    return this.badgeSize;
+};
+
+CanvasLegend.prototype.setFontSize = function(size) {
+
+    this.fontSize = size;
+    this.badgeSize = size;
+    this.badgeMarginRight = Math.max(1, Math.round(size * 0.25));
+    this.lineHeight = this.getLineHeight();
+};
+
+CanvasLegend.prototype.getBadgeSize = function() {
+
+    return this.badgeSize;
+};
+
+CanvasLegend.prototype.updateMaxWidth = function() {
+
+    this.maxWidth = Math.max(this.maxWidth, this.x);
+};
+
+CanvasLegend.prototype.getMaxWidth = function() {
+
+    return this.maxWidth;
+};
+
+CanvasLegend.prototype.getLineHeight = function() {
+
+    return this.opts.legend.style.lineSpacing + Math.max(this.badgeSize, this.fontSize);
+};
+
 CanvasLegend.prototype.getLegendHeight = function() {
 
     // Count the number of lines
     var numberOfLines = 0;
-    var numberOfStatementsOnNewline = 0;
+    var numberOfTokensOnNewline = 0;
 
     var self = this;
-    $.each(this.opts.legend.statements, function(idx) {
-        var statement = self.opts.legend.statements[idx];
-        if (statement.value.indexOf("\\n") > -1) {
+    $.each(self.tokens, function(idx) {
+        var token = self.tokens[idx];
+        if (self.tokens[idx].type === TOKENS.Newline) {
             numberOfLines++;
-            numberOfStatementsOnNewline = 0;
+            numberOfTokensOnNewline = 0;
         } else {
-            numberOfStatementsOnNewline++;
+            numberOfTokensOnNewline++;
         }
     });
 
-    if (numberOfStatementsOnNewline > 0) {
+    if (numberOfTokensOnNewline > 0) {
         numberOfLines++;
     }
 
-    return numberOfLines * this.lineWidth + options.legend.margin.top + options.legend.margin.bottom;
+    return numberOfLines * this.lineHeight + options.legend.margin.top + options.legend.margin.bottom;
 };
+
 CanvasLegend.prototype.beforeDraw = function() {
 
     this.ctx = this.plot.getCanvas().getContext('2d');
@@ -76,39 +113,54 @@ CanvasLegend.prototype.beforeDraw = function() {
     // Initial coordinates
     this.x = this.xMin;
     this.y = this.yMin;
+
+    this.maxWidth = this.x;
 };
+
 CanvasLegend.prototype.drawText = function(text) {
 
     this.ctx.fillStyle = "black";
     this.ctx.font = this.fontSize + "px Monospace";
     this.ctx.textAlign = "left";
-    this.ctx.fillText(text, this.x, this.y + this.fontSize);
+
+    if (this.doRender) {
+        this.ctx.fillText(text, this.x, this.y + this.fontSize);
+    }
 
     var textSize = this.ctx.measureText(text);
     this.x += textSize.width;
+    this.updateMaxWidth();
 };
+
 CanvasLegend.prototype.drawBadge = function(color) {
 
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(this.x, this.y, this.badgeSize, this.badgeSize);
+    if (this.doRender) {
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(this.x, this.y, this.badgeSize, this.badgeSize);
 
-    this.ctx.beginPath();
-    this.ctx.lineWidth = "0.5";
-    this.ctx.strokeStyle = "black";
-    this.ctx.rect(this.x, this.y, this.badgeSize, this.badgeSize);
-    this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.lineHeight = "0.5";
+        this.ctx.strokeStyle = "black";
+        this.ctx.rect(this.x, this.y, this.badgeSize, this.badgeSize);
+        this.ctx.stroke();
+    }
 
     this.x += this.badgeSize + this.badgeMarginRight;
+    this.updateMaxWidth();
 };
+
 CanvasLegend.prototype.drawNewline = function() {
 
-    this.y = this.lineWidth + this.y;
+    this.y = this.lineHeight + this.y;
     this.x = this.xMin;
 };
-CanvasLegend.prototype.afterDraw = function() {
 
-    this.ctx.save();
+CanvasLegend.prototype.afterDraw = function() {
+    if (this.doRender) {
+        this.ctx.save();
+    }
 };
+
 function tokenizeStatement(value) {
 
     var stack = [], tokens = [], types = {}, lfRegex = /^%(\d*)(\.(\d+))?lf/;
@@ -168,6 +220,20 @@ function tokenizeStatement(value) {
 
             i++;
         } else if (c == '\\' && nextc == 'n') {
+
+            pushToken({
+                type: TOKENS.Newline
+            });
+
+            i++;
+        } else if (c == '\\' && nextc == 'l') {
+
+            pushToken({
+                type: TOKENS.Newline
+            });
+
+            i++;
+        } else if (c == '\\' && nextc == 's') {
 
             pushToken({
                 type: TOKENS.Newline
@@ -384,28 +450,70 @@ function init(plot) {
         // Hide the existing legend
         options.legend.show = false;
 
+        // Tokenize all of the statements
+        var tokens = [];
+        $.each(options.legend.statements, function(idx) {
+            var statement = options.legend.statements[idx];
+            tokens.push(tokenizeStatement(statement.value));
+        });
+        // Flatten the array
+        tokens = Array.prototype.concat.apply([], tokens);
+
         var rendererType = CanvasLegend;
-        var renderer = new rendererType(plot, options);
+        var renderer = new rendererType(plot, options, tokens);
 
         // Shift the graph up by the legend height
         options.grid.margin.bottom = renderer.getLegendHeight();
 
-        plot.hooks.draw.push(function (plot) {
-            // Render!
+        var doRender = function(data) {
             renderer.beforeDraw();
-            var allSeries = plot.getData();
             $.each(options.legend.statements, function(idx) {
                 var statement = options.legend.statements[idx];
 
                 // Find the series with the metric name if it's defined, not all statements need an associated metric
                 var series = undefined;
                 if (statement.metric !== undefined) {
-                    series = getSeriesWithMetricName(statement.metric, allSeries, options);
+                    series = getSeriesWithMetricName(statement.metric, data, options);
                 }
 
                 renderStatement(statement, series, renderer);
             });
             renderer.afterDraw();
+        };
+
+        plot.hooks.draw.push(function (plot) {
+            var canvasWidth = plot.getCanvas().clientWidth,
+                renderedWidth = 0,
+                options = plot.getOptions().legend,
+                fontSize = options.style.fontSize,
+                minFontSize = options.style.minFontSize,
+                data = plot.getData();
+
+            // console.log('canvas width: ' + canvasWidth);
+            // console.log('renderer:',renderer);
+            renderer.setDryRun(true);
+            do {
+                renderer.setFontSize(fontSize);
+                doRender(data);
+                renderedWidth = renderer.getMaxWidth();
+                // console.log('rendered width at font size ' + fontSize + ': ' + renderedWidth);
+                if (renderedWidth > canvasWidth) {
+                    if (fontSize === minFontSize) {
+                        //console.log('WARNING: minimum font size reached... giving up.');
+                        break;
+                    }
+                    fontSize--;
+                } else {
+                    break;
+                }
+            } while (renderedWidth > canvasWidth);
+
+            // console.log('final font size: ' + fontSize);
+            // console.log('final rendered width: ' + renderedWidth);
+            // console.log('rendering...');
+            renderer.setDryRun(false);
+            doRender(data);
+            // console.log('done');
         });
     });
 }
