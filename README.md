@@ -20,8 +20,12 @@ GPRINT:float5:MAX:"Max \\: %10.2lf\\n" \
 LINE2:float15#a40000:"15 minute" \
 GPRINT:float15:AVERAGE:"Avg \\: %10.2lf" \
 GPRINT:float15:MIN:"Min \\: %10.2lf" \
-GPRINT:float15:MAX:"Max \\: %10.2lf\\n"
+GPRINT:float15:MAX:"Max \\: %10.2lf\\n" \
+VDEF:sum=other,TOTAL \
+GPRINT:sum:"Total \\: %10.2lf\\n"
 ```
+
+If the aggregation property is not defined, the value used for a legend statement can be provided directly from the statement.
 
 ## Configuration
 
@@ -46,27 +50,27 @@ var options = {
         statements: [
             {
                 metric: 'main',
-                value: '%g nominal Watts'
+                format: '%g nominal Watts'
             },
             {
                 metric: 'main',
                 aggregation: 'AVERAGE',
-                value: 'Avg: %8.2lf %s'
+                format: 'Avg: %8.2lf %s'
             },
             {
                 metric: 'main',
                 aggregation: 'MIN',
-                value: 'Min: %8.2lf %s'
+                format: 'Min: %8.2lf %s'
             },
             {
                 metric: 'main',
                 aggregation: 'MAX',
-                value: 'Max: %8.2lf %s\n'
+                format: 'Max: %8.2lf %s\n'
             },
             {
                 metric: 'other',
-                aggregation: 'AVERAGE',
-                value: 'Other - Avg: %8.2lf %s\n'
+                value: 42.0,
+                format: 'Other - Avg: %8.2lf %s\n'
             },
         ]
     },
