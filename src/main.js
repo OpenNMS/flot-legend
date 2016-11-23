@@ -306,7 +306,12 @@ function init(plot) {
         var renderer = new rendererType(plot, options, tokens);
 
         // Shift the graph up by the legend height
-        options.grid.margin.bottom = renderer.getLegendHeight();
+        options.grid.margin = {
+            top: 0,
+            left: 0,
+            bottom: renderer.getLegendHeight(),
+            right: 0
+        };
 
         var doRender = function(data) {
             renderer.beforeDraw();
