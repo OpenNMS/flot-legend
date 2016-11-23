@@ -1,6 +1,6 @@
 {
   "name": "flot-legend",
-  "version": "2.0.0",
+  "version": "2.0.1-SNAPSHOT",
   "repository": {
     "type": "git",
     "url": "https://github.com/OpenNMS/flot-legend.git"
