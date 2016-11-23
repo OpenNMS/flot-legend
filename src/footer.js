@@ -3,6 +3,6 @@
         init: init,
         options: options,
         name: 'legend',
-        version: '1.0.0'
+        version: '2.0.0'
     });
 })(jQuery);
