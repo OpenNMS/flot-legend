@@ -118,7 +118,7 @@ describe('jquery.flot.legend', function () {
             var stmt = {
                 metric: 'main',
                 aggregation: 'AVERAGE',
-                value: 'Avg: %8.2lf %s\\n'
+                format: 'Avg: %8.2lf %s\\n'
             };
 
             var series = {
@@ -150,7 +150,7 @@ describe('jquery.flot.legend', function () {
             var stmt = {
                 metric: 'main',
                 aggregation: 'AVERAGE',
-                value: 'Avg: %.2lf %s\\n'
+                format: 'Avg: %.2lf %s\\n'
             };
 
             var series = {
@@ -229,22 +229,22 @@ describe('jquery.flot.legend', function () {
                     statements: [
                         {
                             metric: 'main',
-                            value: '%g nominal Watts'
+                            format: '%g nominal Watts'
                         },
                         {
                             metric: 'main',
                             aggregation: 'AVERAGE',
-                            value: 'Avg: %8.2lf %s'
+                            format: 'Avg: %8.2lf %s'
                         },
                         {
                             metric: 'main',
                             aggregation: 'MIN',
-                            value: 'Min: %8.2lf %s'
+                            format: 'Min: %8.2lf %s'
                         },
                         {
                             metric: 'main',
                             aggregation: 'MAX',
-                            value: 'Max: %8.2lf %s\n'
+                            format: 'Max: %8.2lf %s\n'
                         }
                     ]
                 }
@@ -266,7 +266,7 @@ describe('jquery.flot.legend', function () {
                     statements: [
                         {
                             metric: '!main!',
-                            value: '%g nominal Watts'
+                            format: '%g nominal Watts'
                         }
                     ]
                 }
