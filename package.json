@@ -5,6 +5,7 @@
     "type": "git",
     "url": "https://github.com/OpenNMS/flot-legend.git"
   },
+  "main": "jquery.flot.legend.js",
   "homepage": "https://github.com/OpenNMS/flot-legend",
   "devDependencies": {
     "bower": "~1.8.0",
